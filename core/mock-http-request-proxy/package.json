@@ -1,0 +1,11 @@
+{
+  "name": "@app-core/mock-http-request-proxy",
+  "version": "1.0.0",
+  "description": "Mock HTTP request",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jil Henry",
+  "license": "ISC"
+}

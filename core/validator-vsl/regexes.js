@@ -1,0 +1,46 @@
+const schemaLineProcessor = require('./line-processors/schema-processor');
+const isClosedLineProcessor = require('./line-processors/closed-line-processor');
+const typeLineProcessor = require('./line-processors/type-processor');
+const endpointRouteLineProcessor = require('./line-processors/endpoint-processor');
+const multiLineCommentProcessor = require('./line-processors/multi-line-processor');
+const commentBlockLineProcessor = require('./line-processors/comment-block-line-processor');
+const spreadProcessor = require('./line-processors/spread-processor');
+
+const processors = [
+  schemaLineProcessor,
+  isClosedLineProcessor,
+  typeLineProcessor,
+  endpointRouteLineProcessor,
+  spreadProcessor,
+];
+
+const processorsLength = processors.length;
+module.exports = function doRegexLineProcessing(line, lineNodeParent) {
+  let nodeInfo;
+  let commentProcessorResult = multiLineCommentProcessor(line);
+  const parentIsCommentBlockOpening =
+    lineNodeParent?.attributes?.isMultiLineCommentOpening;
+  const isCommentClosing = commentProcessorResult.isMultiLineCommentClosing;
+  const isMultiLineCommentOpening =
+    commentProcessorResult.isMultiLineCommentOpening;
+  if (commentProcessorResult.isCommentNode || parentIsCommentBlockOpening) {
+    if (
+      (isCommentClosing && parentIsCommentBlockOpening) ||
+      (!parentIsCommentBlockOpening && isMultiLineCommentOpening)
+    ) {
+      nodeInfo = commentProcessorResult;
+    } else if (parentIsCommentBlockOpening) {
+      nodeInfo = commentBlockLineProcessor(line);
+    }
+  } else {
+    for (let x = 0; x < processorsLength; x++) {
+      const processor = processors[x];
+      const processorResult = processor(line);
+      if (processorResult.lineMatched) {
+        nodeInfo = processorResult;
+        break;
+      }
+    }
+  }
+  return nodeInfo;
+};

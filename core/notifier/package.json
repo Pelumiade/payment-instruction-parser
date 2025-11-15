@@ -1,0 +1,11 @@
+{
+  "name": "@app-core/notifier",
+  "version": "1.0.0",
+  "description": "Proxy to all forms of notifications",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Jil Henry",
+  "license": "ISC"
+}

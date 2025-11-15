@@ -1,0 +1,21 @@
+{
+  "name": "@app-core/validator",
+  "version": "1.0.0",
+  "description": "A natural language parameter validation library",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "validator",
+    "natural",
+    "language",
+    "validate"
+  ],
+  "author": "Jil Henry",
+  "license": "ISC"
+}
