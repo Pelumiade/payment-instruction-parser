@@ -458,4 +458,232 @@ function parseCreditFormat(parts, instructionLower, result) {
   return result;
 }
 
+function isValidAmount(amount) {
+  if (!amount || typeof amount !== 'string') {
+    return false;
+  }
+
+  const trimmed = amount.trim();
+  if (trimmed.length === 0) {
+    return false;
+  }
+
+  for (let i = 0; i < trimmed.length; i += 1) {
+    const char = trimmed[i];
+    if (i === 0 && char === '-') {
+      return false;
+    }
+    if (char === '.') {
+      return false;
+    }
+    const charCode = char.charCodeAt(0);
+    if (charCode < 48 || charCode > 57) {
+      return false;
+    }
+  }
+
+  const num = parseInt(trimmed, 10);
+  return !Number.isNaN(num) && num > 0;
+}
+
+function isValidDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') {
+    return false;
+  }
+
+  const trimmed = dateStr.trim();
+  if (trimmed.length !== 10) {
+    return false;
+  }
+
+  if (trimmed[4] !== '-' || trimmed[7] !== '-') {
+    return false;
+  }
+
+  const parts = trimmed.split('-');
+  if (parts.length !== 3) {
+    return false;
+  }
+
+  const year = parts[0];
+  const month = parts[1];
+  const day = parts[2];
+
+  if (year.length !== 4 || month.length !== 2 || day.length !== 2) {
+    return false;
+  }
+
+  for (let i = 0; i < year.length; i += 1) {
+    const charCode = year[i].charCodeAt(0);
+    if (charCode < 48 || charCode > 57) {
+      return false;
+    }
+  }
+
+  for (let i = 0; i < month.length; i += 1) {
+    const charCode = month[i].charCodeAt(0);
+    if (charCode < 48 || charCode > 57) {
+      return false;
+    }
+  }
+
+  for (let i = 0; i < day.length; i += 1) {
+    const charCode = day[i].charCodeAt(0);
+    if (charCode < 48 || charCode > 57) {
+      return false;
+    }
+  }
+
+  const yearNum = parseInt(year, 10);
+  const monthNum = parseInt(month, 10);
+  const dayNum = parseInt(day, 10);
+
+  if (Number.isNaN(yearNum) || Number.isNaN(monthNum) || Number.isNaN(dayNum)) {
+    return false;
+  }
+
+  if (monthNum < 1 || monthNum > 12) {
+    return false;
+  }
+
+  if (dayNum < 1 || dayNum > 31) {
+    return false;
+  }
+
+  const date = new Date(`${year}-${month}-${day}T00:00:00.000Z`);
+  const dateYear = date.getUTCFullYear();
+  const dateMonth = date.getUTCMonth() + 1;
+  const dateDay = date.getUTCDate();
+
+  return (
+    dateYear === yearNum && dateMonth === monthNum && dateDay === dayNum
+  );
+}
+
+function isDateInFuture(dateStr) {
+  if (!isValidDate(dateStr)) {
+    return false;
+  }
+
+  const today = new Date();
+  const todayYear = today.getUTCFullYear();
+  const todayMonth = today.getUTCMonth() + 1;
+  const todayDay = today.getUTCDate();
+
+  const parts = dateStr.split('-');
+  const dateYear = parseInt(parts[0], 10);
+  const dateMonth = parseInt(parts[1], 10);
+  const dateDay = parseInt(parts[2], 10);
+
+  if (dateYear > todayYear) {
+    return true;
+  }
+  if (dateYear < todayYear) {
+    return false;
+  }
+
+  if (dateMonth > todayMonth) {
+    return true;
+  }
+  if (dateMonth < todayMonth) {
+    return false;
+  }
+
+  return dateDay > todayDay;
+}
+
+function findAccount(accounts, accountId) {
+  if (!accounts || !Array.isArray(accounts) || !accountId) {
+    return undefined;
+  }
+
+  for (let i = 0; i < accounts.length; i += 1) {
+    if (accounts[i] && accounts[i].id === accountId) {
+      return accounts[i];
+    }
+  }
+
+  return undefined;
+}
+
+function createAccountMap(accounts) {
+  const map = {};
+  if (!accounts || !Array.isArray(accounts)) {
+    return map;
+  }
+
+  for (let i = 0; i < accounts.length; i += 1) {
+    const account = accounts[i];
+    if (account && account.id) {
+      map[account.id] = account;
+    }
+  }
+
+  return map;
+}
+
+function maintainAccountOrder(accounts, accountIds) {
+  const orderMap = {};
+  if (!accounts || !Array.isArray(accounts)) {
+    return accountIds || [];
+  }
+
+  for (let i = 0; i < accounts.length; i += 1) {
+    const account = accounts[i];
+    if (account && account.id) {
+      orderMap[account.id] = i;
+    }
+  }
+
+  if (!accountIds || !Array.isArray(accountIds)) {
+    return [];
+  }
+
+  const ordered = [...accountIds];
+  ordered.sort((a, b) => {
+    const orderA = orderMap[a] !== undefined ? orderMap[a] : Infinity;
+    const orderB = orderMap[b] !== undefined ? orderMap[b] : Infinity;
+    return orderA - orderB;
+  });
+
+  return ordered;
+}
+
+function validateTransaction({ amount, currency, debitAccount, creditAccount }) {
+  if (!debitAccount || !creditAccount) {
+    return null;
+  }
+
+  if (debitAccount.id === creditAccount.id) {
+    return {
+      code: 'AC02',
+      reason: PaymentMessages.SAME_ACCOUNT_ERROR,
+    };
+  }
+
+  if (debitAccount.currency !== creditAccount.currency) {
+    return {
+      code: 'CU01',
+      reason: PaymentMessages.CURRENCY_MISMATCH,
+    };
+  }
+
+  if (debitAccount.currency !== currency) {
+    return {
+      code: 'CU01',
+      reason: PaymentMessages.CURRENCY_MISMATCH,
+    };
+  }
+
+  const amountNum = parseInt(amount, 10);
+  if (!Number.isNaN(amountNum) && debitAccount.balance < amountNum) {
+    return {
+      code: 'AC01',
+      reason: PaymentMessages.INSUFFICIENT_FUNDS,
+    };
+  }
+
+  return null;
+}
+
 module.exports = parseInstruction;
